@@ -1,3 +1,17 @@
+/*
+ * Tetris in C
+ * Port based on OneLoneCoder's Command Line Tetris.
+ *
+ * Original work:
+ * Copyright (C) 2018 Javidx9
+ *
+ * Adapted to C for Linux.
+ * Copyright (C) 2026 Klaus Afton
+ *
+ * Licensed under the GNU General Public License v3.0.
+ * See LICENSE for details.
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
