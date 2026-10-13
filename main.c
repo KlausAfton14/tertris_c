@@ -1,11 +1,20 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <time.h>
+#include <termios.h>
+#include <unistd.h>
+#include <poll.h>
 
 #define FIELD_WIDTH 12 
 #define FIELD_HEIGHT 18
 #define SCREEN_WIDTH 80 
 #define SCREEN_HEIGHT 30 
+
+struct timespec delay = {
+    .tv_sec = 0,
+    .tv_nsec = 50000000L
+};
 
 char tetrominoShapes[7][17] = {
     "..X...X...X...X.",
@@ -60,7 +69,51 @@ void dispplayFrame(char *screen) {
     fflush(stdout);
 }
 
+void updateKeys(bool keys[4]) {
+    for (int i = 0; i < 4; i++)
+        keys[i] = false;
+
+    struct pollfd pfd = {
+        .fd = STDIN_FILENO,
+        .events = POLLIN,
+    };
+
+    while (poll(&pfd, 1, 0) > 0 && (pfd.revents & POLLIN)) {
+        char c;
+        if (read(STDIN_FILENO, &c, 1) != 1) break;
+        switch (c) {
+            case 'd':
+                keys[0] = true;
+                break;
+            case 'a':
+                keys[0] = true;
+                break;
+            case 's':
+                keys[0] = true;
+                break;
+            case 'z':
+                keys[0] = true;
+                break;
+        }
+
+        pfd.revents = 0;
+    }
+}
+        
+
+
 int main() {
+
+    // some linux bullshit
+    struct termios oldt, newt;
+
+    tcgetattr(STDIN_FILENO, &oldt);
+    newt = oldt;
+    newt.c_lflag &= ~(ICANON | ECHO);
+    newt.c_cc[VMIN] = 0;
+    newt.c_cc[VTIME] = 0;
+
+    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
     // Clear terminal and hide cursor
     printf("\033[2J\033[?25l");
@@ -72,8 +125,11 @@ int main() {
     int currentRotation = 0;
     int currentX = FIELD_WIDTH / 2;
     int currentY = 0;
-    bool Keys[4] = {};
+    bool keys[4] = {false};
     bool rotateHold = true;
+
+    int lines[4];
+    int lineCount = 0;
 
     // Play field buffer
     field = malloc(FIELD_WIDTH * FIELD_HEIGHT * sizeof(unsigned char));
@@ -88,8 +144,15 @@ int main() {
     while (!gameOver) {
 
         // GAME TIMING
+        nanosleep(&delay, NULL);
+        
 
         // INPUT
+        updateKeys(keys);
+
+        printf("\rkeys: [%d, %d, %d, %d]   ",
+            keys[0], keys[1], keys[2], keys[3]);
+        fflush(stdout);
 
         // GAME LOGIC
             // Lock the current piece in the field
