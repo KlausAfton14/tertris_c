@@ -128,6 +128,12 @@ int main() {
     bool keys[4] = {false};
     bool rotateHold = true;
 
+    int speed = 20;
+    int speedCounter = 0;
+    bool forceDown = false;
+    int pieceCount = 0;
+    int score = 0;
+
     int lines[4];
     int lineCount = 0;
 
@@ -145,16 +151,23 @@ int main() {
 
         // GAME TIMING
         nanosleep(&delay, NULL);
+        speedCounter++;
+        forceDown = (speedCounter == speed);
         
-
         // INPUT
         updateKeys(keys);
 
-        printf("\rkeys: [%d, %d, %d, %d]   ",
-            keys[0], keys[1], keys[2], keys[3]);
-        fflush(stdout);
-
         // GAME LOGIC
+        currentX += (keys[0] && doesPieceFit(currentPiece, currentRotation, currentX + 1, currentY)) ? 1 : 0;
+        currentX -= (keys[1] && doesPieceFit(currentPiece, currentRotation, currentX - 1, currentY)) ? 1 : 0;
+        currentY += (keys[2] && doesPieceFit(currentPiece, currentRotation, currentX, currentY + 1)) ? 1 : 0;
+        if (keys[3]) {
+            currentRotation += (rotateHold && doesPieceFit(currentPiece, currentRotation + 1, currentX, currentY)) ? 1 : 0;
+            rotateHold = false;
+        } else {
+            rotateHold = true;
+        }
+
             // Lock the current piece in the field
             // Chech have we got any lines
                 // Remove Line, set to =
