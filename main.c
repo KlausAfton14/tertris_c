@@ -86,13 +86,13 @@ void updateKeys(bool keys[4]) {
                 keys[0] = true;
                 break;
             case 'a':
-                keys[0] = true;
+                keys[1] = true;
                 break;
             case 's':
-                keys[0] = true;
+                keys[2] = true;
                 break;
             case 'z':
-                keys[0] = true;
+                keys[3] = true;
                 break;
         }
 
