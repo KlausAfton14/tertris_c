@@ -7,7 +7,7 @@
 #define SCREEN_WIDTH 80 
 #define SCREEN_HEIGHT 30 
 
-char tetromino[7][17] = {
+char tetrominoShapes[7][17] = {
     "..X...X...X...X.",
     "..X..XX..X......",
     ".X...XX...X.....",
@@ -20,10 +20,32 @@ char tetromino[7][17] = {
 unsigned char *field = NULL;
 
 int rotate(int px, int py, int r) {
+    
+    switch (r % 4)
+    {
+        case 0: return py * 4 + px; // 0 deg
+        case 1: return 12 + py - (px * 4); // 90 deg
+        case 2: return 15 - (py * 4) - px; // 180 deg
+        case 3: return 3 - py + (px * 4); // 270 deg
+    }
     return 0;
 }
 
 bool doesPieceFit(int tetromino, int rotation, int posX, int posY) {
+
+    for (int px = 0; px < 4; px++)
+        for (int py = 0; py < 4; py++) {
+            // Get index into piece
+            int pi = rotate(px, py, rotation);
+            // Get index into field
+            int fi = (posY + py) * FIELD_WIDTH + (posX + px);
+
+            if (posX + px >= 0 && posX + px < FIELD_WIDTH)
+                if (posY + py >= 0 && posY + py < FIELD_HEIGHT) {
+                    if(tetrominoShapes[tetromino][pi] == 'X' && field[fi] !=0) return false;
+                }
+        }
+
     return true;
 }
 
@@ -81,7 +103,13 @@ int main() {
         for (int x = 0; x < FIELD_WIDTH; x++)
             for (int y = 0; y < FIELD_HEIGHT; y++)
                 screen[(y + 2) * SCREEN_WIDTH + (x + 2)] = " ABCDEFG=#"[field[y * FIELD_WIDTH + x]];
+
         // Draw Piece
+        for (int px = 0; px < 4; px++)
+            for (int py = 0; py < 4; py++)
+                if (tetrominoShapes[currentPiece][rotate(px,py,currentRotation)] == 'X')
+                    screen[(currentY + py + 2)*SCREEN_WIDTH + (currentX + px + 2)] = currentPiece + 65;
+
         // Draw score
             // Display Frame before clearing lines
             // Display Frame after clearing lines
