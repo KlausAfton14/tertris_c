@@ -58,7 +58,7 @@ bool doesPieceFit(int tetromino, int rotation, int posX, int posY) {
     return true;
 }
 
-void dispplayFrame(char *screen) {
+void displayFrame(char *screen) {
     printf("\033[H");
 
     for (int y = 0; y < SCREEN_HEIGHT; y++) {
@@ -67,6 +67,30 @@ void dispplayFrame(char *screen) {
     }
 
     fflush(stdout);
+}
+
+void drawScreen(char *screen, int currentPiece, int currentRotation, int currentX, int currentY, int score) {
+        // Clearing Screen
+        for (int i = 0; i < SCREEN_WIDTH * SCREEN_HEIGHT; i++)
+            screen[i] = ' ';
+
+        // Draw Field
+        for (int x = 0; x < FIELD_WIDTH; x++)
+            for (int y = 0; y < FIELD_HEIGHT; y++)
+                screen[(y + 2) * SCREEN_WIDTH + (x + 2)] = " ABCDEFG=#"[field[y * FIELD_WIDTH + x]];
+
+        // Draw Piece
+        for (int px = 0; px < 4; px++)
+            for (int py = 0; py < 4; py++)
+                if (tetrominoShapes[currentPiece][rotate(px,py,currentRotation)] == 'X')
+                    screen[(currentY + py + 2)*SCREEN_WIDTH + (currentX + px + 2)] = currentPiece + 65;
+        
+        // Draw Score
+        char scoreText[16];
+        snprintf(scoreText, sizeof(scoreText), "SCORE: %8d", score);
+
+        for (int i = 0; i < 15; i++)
+            screen[2 * SCREEN_WIDTH + FIELD_WIDTH + 6 + i] = scoreText[i];
 }
 
 void updateKeys(bool keys[4]) {
@@ -104,6 +128,7 @@ void updateKeys(bool keys[4]) {
 
 int main() {
 
+    srand(time(NULL));
     // some linux bullshit
     struct termios oldt, newt;
 
@@ -148,7 +173,6 @@ int main() {
     for (int i = 0; i < SCREEN_WIDTH * SCREEN_HEIGHT; i++) screen[i] = ' ';
 
     while (!gameOver) {
-
         // GAME TIMING
         nanosleep(&delay, NULL);
         speedCounter++;
@@ -168,32 +192,85 @@ int main() {
             rotateHold = true;
         }
 
-            // Lock the current piece in the field
-            // Chech have we got any lines
-                // Remove Line, set to =
-            // Chose next piece
-            // If piece does not fit
+        if (forceDown) {
+            if (doesPieceFit(currentPiece, currentRotation, currentX, currentY + 1))
+                currentY++;
+            else {
+                // Lock the current piece in the field
+                for (int px = 0; px < 4; px++)
+                    for (int py = 0; py < 4; py++)
+                        if (tetrominoShapes[currentPiece][rotate(px,py,currentRotation)] == 'X')
+                            field[(currentY + py) * FIELD_WIDTH + (currentX + px)] = currentPiece + 1;
+
+                pieceCount++;
+                if (pieceCount % 50 == 0 && speed >= 10) speed--;
+    
+                // Chech have we got any lines
+                for (int py = 0; py < 4; py++)
+                    if (currentY + py < FIELD_HEIGHT - 1) {
+                        bool line = true;
+                        for (int px = 1; px < FIELD_WIDTH - 1; px++)
+                            line &= (field[(currentY + py) * FIELD_WIDTH + px]) != 0;
+                        if (line) {
+                            // Remove Line, set to =
+                            for (int px = 1; px < FIELD_WIDTH - 1; px++)
+                                field[(currentY + py) * FIELD_WIDTH + px] = 8;
+                            lines[lineCount++] = (currentY + py);
+                        }
+                    }
+                
+                    score += 25;
+                    if(lineCount > 0) score += (1 << lineCount) * 100;
+
+                    // Chose next piece
+                    currentX = FIELD_WIDTH / 2;
+                    currentY = 0;
+                    currentRotation = 0;
+                    currentPiece = rand() % 7;
+
+                    // If piece does not fit
+                    gameOver = !doesPieceFit(currentPiece, currentRotation, currentX, currentY);
+            }
+
+            speedCounter = 0;
+        }
 
         // RENDER OUTPUT
-        // Draw Field
-        for (int x = 0; x < FIELD_WIDTH; x++)
-            for (int y = 0; y < FIELD_HEIGHT; y++)
-                screen[(y + 2) * SCREEN_WIDTH + (x + 2)] = " ABCDEFG=#"[field[y * FIELD_WIDTH + x]];
+        drawScreen(screen, currentPiece, currentRotation, currentX, currentY, score);
 
-        // Draw Piece
-        for (int px = 0; px < 4; px++)
-            for (int py = 0; py < 4; py++)
-                if (tetrominoShapes[currentPiece][rotate(px,py,currentRotation)] == 'X')
-                    screen[(currentY + py + 2)*SCREEN_WIDTH + (currentX + px + 2)] = currentPiece + 65;
-
-        // Draw score
+        if (lineCount > 0) {
             // Display Frame before clearing lines
-            // Display Frame after clearing lines
+            displayFrame(screen);
+            nanosleep(&(struct timespec){
+                .tv_sec = 0,
+                .tv_nsec = 400000000L
+            }, NULL);
 
-        dispplayFrame(screen);
+            for (int i = 0; i < lineCount; i++) {
+                int v = lines[i];
+
+                for (int x = 1; x < FIELD_WIDTH - 1; x++){
+                    for (int y = v; y > 0; y--)
+                        field[y * FIELD_WIDTH + x] = field[(y - 1) * FIELD_WIDTH + x];
+                
+                    field[x] = 0;
+                }
+            }
+
+            lineCount = 0;
+        }
+        // Display Frame after clearing lines
+        drawScreen(screen, currentPiece, currentRotation, currentX, currentY, score);
+        displayFrame(screen);
     }
 
     // GAME OVER
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+    printf("\033[?25h\n");
+    printf("Game Over!! Score: %d\n", score);
+    free(field);
+    free(screen);
+
     return 0;
 }
 
